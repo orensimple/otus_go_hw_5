@@ -12,17 +12,18 @@ func main() {
 		work := work(i)
 		sliceWork = append(sliceWork, work)
 	}
-	doWork(sliceWork, 10, 200)
+	doWork(sliceWork, 3, 2)
 }
 
 func doWork(fs []func() error, n int, nError int) {
-	chError := make(chan error, nError)
+	chError := make(chan error, nError-1)
 	var wg sync.WaitGroup
 	quit := make(chan bool)
-	for _, f := range fs {
+	for z := 0; z < len(fs) && z < nError; z++ {
+		f := fs[z]
 		for i := 0; i < n; i++ {
 			wg.Add(1)
-			go func() {
+			go func(f func() error) {
 				defer func() { wg.Done() }()
 				for {
 					select {
@@ -32,9 +33,10 @@ func doWork(fs []func() error, n int, nError int) {
 						chError <- f()
 					}
 				}
-			}()
+			}(f)
 		}
 	}
+
 	var count int
 	for err := range chError {
 		fmt.Println(err)
@@ -44,7 +46,6 @@ func doWork(fs []func() error, n int, nError int) {
 			break
 		}
 	}
-
 	fmt.Println("after max error")
 	go func() {
 		wg.Wait()
